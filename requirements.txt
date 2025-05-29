@@ -1,2 +1,5 @@
-﻿numpy==1.24.3
-pyyaml==6.0.1
+paho-mqtt
+mlflow
+pandas
+scikit-learn
+pytest
