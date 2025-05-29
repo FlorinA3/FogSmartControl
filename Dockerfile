@@ -1,9 +1,13 @@
 FROM python:3.10-slim
 
+# Set environment variables
+ENV PYTHONPATH=/app:/app/models
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 COPY requirements.txt .
 
-# Upgrade pip and install dependencies
+# Install dependencies
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
@@ -13,8 +17,5 @@ USER appuser
 
 # Copy application code
 COPY . .
-
-# Set Python path
-ENV PYTHONPATH=/app
 
 CMD ["python", "app/main.py"]
