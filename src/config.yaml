@@ -1,0 +1,11 @@
+simulation:
+  num_fog_nodes: 5
+  num_tasks: 10
+  area_size: 1000
+  seed: 42
+
+genetic_algorithm:
+  population_size: 50
+  generations: 100
+  mutation_rate: 0.1
+  num_parents: 25
