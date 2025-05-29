@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fogsmartcontrol
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fsc
+  template:
+    metadata:
+      labels:
+        app: fsc
+    spec:
+      containers:
+      - name: main
+        image: florind3/fogsmartcontrol:latest
+        envFrom:
+          - secretRef:
+              name: fsc-secrets
+        ports:
+        - containerPort: 5000
