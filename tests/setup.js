@@ -1,20 +1,6 @@
-import '@testing-library/jest-dom/extend-expect';
-import { configure } from '@testing-library/dom';
+// CORRECTED setup.js
+import '@testing-library/jest-dom'; // Removed '/extend-expect'
+// tests/setup.js
+import { state, Device, BLE_CONFIG } from '../src/app';
 
-configure({
-  testIdAttribute: 'data-test'
-});
-
-// Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-global.localStorage = localStorageMock;
-
-// Mock service worker
-global.workbox = {
-  register: jest.fn()
-};
+global.__FogSmartControl = { state, Device, BLE_CONFIG };

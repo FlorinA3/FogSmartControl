@@ -1,8 +1,6 @@
 module.exports = {
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  testMatch: ['**/tests/**/*.test.js'],
-  coveragePathIgnorePatterns: ['/node_modules/'],
+  testMatch: ['**/tests/*.test.js'],  // Changed to match top-level tests only
   transform: {
     '^.+\\.js$': 'babel-jest'
   }

@@ -5,8 +5,9 @@
   "directories": {
     "test": "tests"
   },
-  "scripts": { "test:watch": "jest --watch",
-    "test": "jest",,
+  "scripts": {
+    "test:watch": "jest --watch",
+    "test": "jest",
     "start": "node server.js"
   },
   "keywords": [],
@@ -14,6 +15,14 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "jest": "^29.7.0"
+    "@babel/preset-env": "^7.27.2",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "babel-jest": "^30.0.0-beta.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.0.0-beta.3"
+  },
+  "dependencies": {
+    "@sentry/browser": "^9.23.0"
   }
 }
