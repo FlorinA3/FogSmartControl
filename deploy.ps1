@@ -15,7 +15,7 @@ docker run -d --name fog-mosquitto `
     eclipse-mosquitto:2.0.18
 
 # 3. Update iot_bridge.py
-@"
+@'
 import os
 import json
 import paho.mqtt.client as mqtt
@@ -49,7 +49,7 @@ try:
 except Exception as e:
     print(f"Connection failed: {str(e)}")
     print("Troubleshooting: Ensure Mosquitto container is running")
-"@ | Set-Content -Path "app/iot_bridge.py"
+'@ | Set-Content -Path "app/iot_bridge.py"
 
 # 4. Build application image
 Write-Host "Building application image..." -ForegroundColor Cyan
@@ -68,7 +68,7 @@ Write-Host "`n===== RUNNING VALIDATION TESTS =====" -ForegroundColor Green
 
 # Test 1: Container status
 Write-Host "`n[TEST] Container status..." -ForegroundColor Yellow
-docker ps --filter "name=fog" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+docker ps --filter "name=fog" --format "table {{.Names}}`t{{.Status}}`t{{.Ports}}"
 
 # Test 2: Service connectivity
 Write-Host "`n[TEST] Service connectivity..." -ForegroundColor Yellow
@@ -76,7 +76,7 @@ docker exec fogsmart-app python -c "from app.scheduler import ResourceScheduler;
 
 # Test 3: MQTT integration
 Write-Host "`n[TEST] MQTT communication..." -ForegroundColor Yellow
-docker exec fog-mosquitto mosquitto_pub -t fog_nodes/sensor01 -m '{"device_id":"final_test","cpu_load":0.85}'
+docker exec fog-mosquitto mosquitto_pub -t fog_nodes/sensor01 -m '{\"device_id\":\"final_test\",\"cpu_load\":0.85}'
 Start-Sleep -Seconds 2
 Write-Host "Checking application logs..." -ForegroundColor Cyan
 docker logs fogsmart-app --tail 20
