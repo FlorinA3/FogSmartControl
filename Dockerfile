@@ -1,9 +1,20 @@
 FROM python:3.10-slim
+
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+
+# Upgrade pip and install dependencies
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Create non-root user
 RUN useradd -m appuser && chown -R appuser /app
 USER appuser
-COPY . .
-CMD ["python", "app/main.py"]
 
+# Copy application code
+COPY . .
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+CMD ["python", "app/main.py"]
