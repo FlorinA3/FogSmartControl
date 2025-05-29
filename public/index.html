@@ -1,194 +1,472 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SmartFogControl - Fog Machine Controller</title>
-<link rel="stylesheet" href="../styles.css">
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-<header>
-  <div class="header-content">
-    <div class="logo-container">
-      <i class="fas fa-cloud fa-2x"></i>
-      <h1>Smart<span>Fog</span>Control</h1>
-    </div>
-    <div class="header-info">
-      <div class="connection-status">
-        <span id="networkStatus">Online</span>
-        <div class="status-led"></div>
-      </div>
-      <div class="app-version">v2.2</div>
-    </div>
-  </div>
-  <p class="tagline">Advanced Control for Your Fog Machines</p>
-</header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1a237e" />
+    <meta
+      name="description"
+      content="Professional control system for fog machines and special effects"
+    />
+    <title>SmartFogControl - Fog Machine Controller</title>
 
-<main>
-  <section class="section-card">
-    <div class="section-header">
-      <h2><i class="fas fa-microchip"></i> Device Management</h2>
-      <button onclick="scanForDevices()" class="scan-btn">
-        <i class="fas fa-bluetooth"></i> Scan
-      </button>
-    </div>
-    <div id="devices-container" class="devices-container"></div>
-    <div class="batch-controls">
-      <button onclick="startAllDevices()" class="batch-btn">
-        <i class="fas fa-play-circle"></i> Start All
-      </button>
-      <button onclick="emergencyStopAll()" class="batch-btn emergency-btn">
-        <i class="fas fa-stop-circle"></i> STOP ALL
-      </button>
-    </div>
-  </section>
+    <!-- ================== CRITICAL PATH FIXES ================== -->
+    <!-- Local Resources -->
+    <link rel="stylesheet" href="/public/styles.css" />
+    <!-- Fixed absolute path -->
+    <link rel="manifest" href="/public/manifest.json" />
 
-  <section class="section-card">
-    <h2><i class="fas fa-sliders-h"></i> Device Controls</h2>
-    <div id="controls-container" class="controls-container"></div>
-  </section>
+    <!-- Preconnect to CDNs -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+    <link rel="preconnect" href="https://api.fogcontrol.com" />
 
-  <section class="section-card">
-    <h2><i class="fas fa-clock"></i> Scheduling</h2>
-    <div class="schedule-form">
-      <div class="form-group">
-        <label for="scheduleName">Name</label>
-        <input type="text" id="scheduleName" placeholder="Morning Show">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="scheduleTime">Time</label>
-          <input type="time" id="scheduleTime" class="schedule-input">
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/src/sw.js', {
+              scope: '/',
+              updateViaCache: 'none',
+            })
+            .then((reg) => {
+              console.log('SW registered:', reg);
+
+              // Track updates
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (
+                    newWorker.state === 'installed' &&
+                    navigator.serviceWorker.controller
+                  ) {
+                    showUpdateNotification();
+                  }
+                });
+              });
+
+              // Version sync
+              navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'VERSION_UPDATE') {
+                  updateVersionDisplay(event.data.version);
+                }
+              });
+
+              // Request current version
+              reg.active.postMessage({ type: 'GET_VERSION' });
+            })
+            .catch((err) => console.error('SW registration failed:', err));
+        });
+      }
+
+      function showUpdateNotification() {
+        if (Notification.permission === 'granted') {
+          new Notification('App Updated', {
+            body: 'Restart to apply the latest features',
+            icon: '/icons/icon-192x192.png',
+            vibrate: [200, 100, 200],
+          });
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') showUpdateNotification();
+          });
+        }
+      }
+
+      function updateVersionDisplay(version) {
+        document
+          .querySelectorAll('#versionDisplay, #appVersion')
+          .forEach((el) => {
+            el.textContent = `v${version}`;
+          });
+      }
+    </script>
+
+    <!-- Progressive Web App Configuration -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "SmartFogControl",
+        "description": "Professional fog machine control system",
+        "applicationCategory": "Utility",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header>
+      <div class="header-content">
+        <div class="logo-container">
+          <svg class="logo-icon" width="32" height="32" viewBox="0 0 24 24">
+            <path
+              d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z"
+            />
+          </svg>
+          <h1>Smart<span>Fog</span>Control</h1>
         </div>
-        <div class="form-group">
-          <label for="scheduleRecurrence">Recurrence</label>
-          <select id="scheduleRecurrence" class="schedule-input">
-            <option value="daily">Daily</option>
-            <option value="weekdays">Weekdays</option>
-            <option value="weekends">Weekends</option>
-            <option value="weekly">Weekly</option>
-            <option value="once">Once</option>
-          </select>
+        <div class="header-info">
+          <div class="connection-status">
+            <span id="networkStatus">Online</span>
+            <div class="status-led"></div>
+          </div>
+          <div class="app-version" id="appVersion">v2.3.2</div>
         </div>
       </div>
-      <button onclick="addSchedule()" class="schedule-btn">
-        <i class="fas fa-plus-circle"></i> Add
-      </button>
-    </div>
-    <div class="schedules-header">
-      <h3>Active Schedules</h3>
-      <span id="schedules-count">0</span>
-    </div>
-    <div id="scheduleList" class="schedule-items"></div>
-  </section>
+      <p class="tagline">Advanced Control for Your Fog Machines</p>
+    </header>
 
-  <section class="section-card">
-    <h2><i class="fas fa-chart-bar"></i> Stats</h2>
-    <div class="stats-header">
-      <div class="time-filter">
-        <select id="statsPeriod">
-          <option value="today">Today</option>
-          <option value="week">Week</option>
-          <option value="month">Month</option>
-          <option value="all">All</option>
-        </select>
+    <main>
+      <!-- Device Management Section -->
+      <section class="section-card">
+        <div class="section-header">
+          <h2><i class="fas fa-microchip"></i> Device Management</h2>
+          <button id="scanBtn" class="scan-btn" aria-label="Scan for devices">
+            <i class="fas fa-bluetooth"></i> Scan
+          </button>
+        </div>
+        <div id="devices-container" class="devices-container">
+          <div class="empty-state">
+            <i class="fas fa-bluetooth fa-3x"></i>
+            <h3>No Devices</h3>
+            <button class="scan-btn" aria-label="Scan for devices">
+              <i class="fas fa-bluetooth"></i> Scan
+            </button>
+          </div>
+        </div>
+        <div class="batch-controls">
+          <button
+            id="startAllBtn"
+            class="batch-btn"
+            aria-label="Start all devices"
+          >
+            <i class="fas fa-play-circle"></i> Start All
+          </button>
+          <button
+            id="emergencyStopBtn"
+            class="batch-btn emergency-btn"
+            aria-label="Emergency stop"
+          >
+            <i class="fas fa-stop-circle"></i> STOP ALL
+          </button>
+        </div>
+      </section>
+
+      <!-- Device Controls Section -->
+      <section class="section-card">
+        <h2><i class="fas fa-sliders-h"></i> Device Controls</h2>
+        <div id="controls-container" class="controls-container">
+          <div class="empty-state">
+            <i class="fas fa-sliders-h fa-3x"></i>
+            <h3>No Controls</h3>
+            <p>Connect devices to see controls</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scheduling Section -->
+      <section class="section-card">
+        <h2><i class="fas fa-clock"></i> Scheduling</h2>
+        <div class="schedule-form">
+          <div class="form-group">
+            <label for="scheduleName">Name</label>
+            <input
+              type="text"
+              id="scheduleName"
+              placeholder="Morning Show"
+              aria-label="Schedule name"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="scheduleTime">Time</label>
+              <input
+                type="time"
+                id="scheduleTime"
+                class="schedule-input"
+                aria-label="Schedule time"
+              />
+            </div>
+            <div class="form-group">
+              <label for="scheduleRecurrence">Recurrence</label>
+              <select
+                id="scheduleRecurrence"
+                class="schedule-input"
+                aria-label="Schedule recurrence"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekdays">Weekdays</option>
+                <option value="weekends">Weekends</option>
+                <option value="weekly">Weekly</option>
+                <option value="once">Once</option>
+              </select>
+            </div>
+          </div>
+          <button
+            id="addScheduleBtn"
+            class="schedule-btn"
+            aria-label="Add schedule"
+          >
+            <i class="fas fa-plus-circle"></i> Add
+          </button>
+        </div>
+        <div class="schedules-header">
+          <h3>Active Schedules</h3>
+          <span id="schedules-count">0</span>
+        </div>
+        <div id="scheduleList" class="schedule-items">
+          <div class="empty-state">
+            <i class="fas fa-calendar-plus fa-3x"></i>
+            <h3>No Schedules</h3>
+            <p>Create automation schedules</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Statistics Section -->
+      <section class="section-card">
+        <h2><i class="fas fa-chart-bar"></i> Stats</h2>
+        <div class="stats-header">
+          <div class="time-filter">
+            <select id="statsPeriod" aria-label="Statistics period">
+              <option value="today">Today</option>
+              <option value="week">Week</option>
+              <option value="month">Month</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+          <button
+            id="exportStatsBtn"
+            class="export-btn"
+            aria-label="Export statistics"
+          >
+            <i class="fas fa-file-export"></i> Export
+          </button>
+        </div>
+        <div id="stats-container" class="stats-grid">
+          <div class="empty-state">
+            <i class="fas fa-chart-line fa-3x"></i>
+            <h3>No Data</h3>
+            <p>Statistics appear after sessions</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Presets Section -->
+      <section class="section-card">
+        <h2><i class="fas fa-save"></i> Presets</h2>
+        <div class="preset-controls">
+          <button
+            id="savePresetBtn"
+            class="preset-btn"
+            aria-label="Save preset"
+          >
+            <i class="fas fa-save"></i> Save
+          </button>
+          <button
+            id="applyPresetBtn"
+            class="preset-btn"
+            aria-label="Apply preset to all"
+          >
+            <i class="fas fa-sync-alt"></i> Apply All
+          </button>
+        </div>
+        <div class="preset-list-header">
+          <h3>Saved Presets</h3>
+          <span id="presets-count">0</span>
+        </div>
+        <div id="presetList" class="preset-items">
+          <div class="empty-state">
+            <i class="fas fa-save fa-3x"></i>
+            <h3>No Presets</h3>
+            <p>Save settings as presets</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Toast Notification Container -->
+      <div id="toast-container" class="toast-container"></div>
+    </main>
+
+    <footer>
+      <div class="footer-content">
+        <div class="app-info">
+          <p>
+            SmartFogControl <span id="versionDisplay">v2.3.2</span> |
+            <span id="offlineStatus">Online</span>
+          </p>
+          <p>© 2025 SmartFog Systems</p>
+        </div>
+        <div class="app-links">
+          <button id="settingsBtn" class="footer-btn" aria-label="Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+          <button id="helpBtn" class="footer-btn" aria-label="Help">
+            <i class="fas fa-question-circle"></i>
+          </button>
+          <button id="bugReportBtn" class="footer-btn" aria-label="Report bug">
+            <i class="fas fa-bug"></i>
+          </button>
+        </div>
       </div>
-      <button class="export-btn">
-        <i class="fas fa-file-export"></i> Export
-      </button>
-    </div>
-    <div id="stats-container" class="stats-grid"></div>
-  </section>
+    </footer>
 
-  <section class="section-card">
-    <h2><i class="fas fa-save"></i> Presets</h2>
-    <div class="preset-controls">
-      <button onclick="saveCurrentAsPreset()" class="preset-btn">
-        <i class="fas fa-save"></i> Save
-      </button>
-      <button onclick="applyPresetToAll()" class="preset-btn">
-        <i class="fas fa-sync-alt"></i> Apply All
-      </button>
-    </div>
-    <div class="preset-list-header">
-      <h3>Saved Presets</h3>
-      <span id="presets-count">0</span>
-    </div>
-    <div id="presetList" class="preset-items"></div>
-  </section>
-</main>
+    <!-- ================== PATH CORRECTIONS ================== -->
+    <!-- App Script -->
+    <script src="/src/app.js"></script>
 
-<footer>
-  <div class="footer-content">
-    <div class="app-info">
-      <p>SmartFogControl v2.2 | <span id="offlineStatus">Online</span></p>
-      <p>© 2025 SmartFog Systems</p>
-    </div>
-    <div class="app-links">
-      <button class="footer-btn"><i class="fas fa-cog"></i></button>
-      <button class="footer-btn"><i class="fas fa-question-circle"></i></button>
-      <button class="footer-btn"><i class="fas fa-bug"></i></button>
-    </div>
-  </div>
-</footer>
+    <!-- Inline Initialization -->
+    <script>
+      // Set current year in footer
+      document.querySelector(
+        'footer .app-info p:last-child'
+      ).innerHTML = `© ${new Date().getFullYear()} SmartFog Systems`;
 
-<script src="../src/app.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  // Network status indicator
-  const netStatus = document.getElementById('offlineStatus');
-  const netLed = document.querySelector('.status-led');
-  
-  function updateNetworkStatus() {
-    if (navigator.onLine) {
-      netStatus.textContent = 'Online';
-      netStatus.style.color = '#00cc00';
-      netLed.style.backgroundColor = '#00cc00';
-    } else {
-      netStatus.textContent = 'Offline';
-      netStatus.style.color = '#ff4444';
-      netLed.style.backgroundColor = '#ff4444';
-    }
-  }
-  
-  window.addEventListener('online', updateNetworkStatus);
-  window.addEventListener('offline', updateNetworkStatus);
-  updateNetworkStatus();
-  
-  // Initialize empty states
-  document.getElementById('devices-container').innerHTML = `
-    <div class="empty-state">
-      <i class="fas fa-bluetooth fa-3x"></i>
-      <h3>No Devices</h3>
-      <p>Scan to connect fog machines</p>
-      <button onclick="scanForDevices()" class="scan-btn">
-        <i class="fas fa-bluetooth"></i> Scan
-      </button>
-    </div>`;
-  
-  document.getElementById('scheduleList').innerHTML = `
-    <div class="empty-state">
-      <i class="fas fa-calendar-plus fa-3x"></i>
-      <h3>No Schedules</h3>
-      <p>Create automation schedules</p>
-    </div>`;
-  
-  document.getElementById('presetList').innerHTML = `
-    <div class="empty-state">
-      <i class="fas fa-save fa-3x"></i>
-      <h3>No Presets</h3>
-      <p>Save settings as presets</p>
-    </div>`;
-  
-  document.getElementById('stats-container').innerHTML = `
-    <div class="empty-state">
-      <i class="fas fa-chart-line fa-3x"></i>
-      <h3>No Data</h3>
-      <p>Statistics appear after sessions</p>
-    </div>`;
-});
-</script>
-</body>
+      // Initialize Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((reg) => {
+          // Periodically check for updates (every 6 hours)
+          setInterval(() => reg.update(), 21600000);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // Network status indicator
+        const updateNetworkStatus = () => {
+          const isOnline = navigator.onLine;
+          const statusEl = document.getElementById('offlineStatus');
+          const networkStatusEl = document.getElementById('networkStatus');
+          const statusLed = document.querySelector('.status-led');
+
+          const statusText = isOnline ? 'Online' : 'Offline';
+          statusEl.textContent = statusText;
+          networkStatusEl.textContent = statusText;
+
+          const color = isOnline ? '#00cc00' : '#ff4444';
+          statusEl.style.color = color;
+          networkStatusEl.style.color = color;
+          statusLed.style.backgroundColor = color;
+
+          // Toggle UI elements
+          const interactiveButtons = document.querySelectorAll(
+            '#scanBtn, .batch-btn, .schedule-btn, .preset-btn'
+          );
+
+          interactiveButtons.forEach((btn) => {
+            btn.disabled = !isOnline;
+            btn.title = isOnline ? '' : 'Offline mode - unavailable';
+          });
+
+          // Show connection status toast
+          if (!isOnline) {
+            showToast(
+              'Working in offline mode. Some features limited.',
+              'warning',
+              5000
+            );
+          }
+        };
+
+        // Network event listeners
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        updateNetworkStatus();
+
+        // Event delegation with accessibility
+        document.body.addEventListener('click', (e) => {
+          // Device management
+          if (e.target.closest('#scanBtn') || e.target.closest('.scan-btn')) {
+            scanForDevices();
+          }
+          if (e.target.closest('#startAllBtn')) startAllDevices();
+          if (e.target.closest('#emergencyStopBtn')) emergencyStopAll();
+
+          // Scheduling
+          if (e.target.closest('#addScheduleBtn')) addSchedule();
+
+          // Presets
+          if (e.target.closest('#savePresetBtn')) saveCurrentAsPreset();
+          if (e.target.closest('#applyPresetBtn')) applyPresetToAll();
+
+          // Statistics
+          if (e.target.closest('#exportStatsBtn')) exportStatistics();
+
+          // Footer buttons
+          if (e.target.closest('#settingsBtn')) openSettings();
+          if (e.target.closest('#helpBtn')) showHelp();
+          if (e.target.closest('#bugReportBtn')) reportBug();
+        });
+      });
+
+      // Toast notification system
+      function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+          <div class="toast-icon">
+            <i class="fas ${
+              type === 'error'
+                ? 'fa-exclamation-circle'
+                : type === 'success'
+                ? 'fa-check-circle'
+                : 'fa-info-circle'
+            }"></i>
+          </div>
+          <div class="toast-message">${message}</div>
+          <button class="toast-close" aria-label="Close toast">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+
+        container.appendChild(toast);
+
+        // Auto-remove after duration
+        setTimeout(() => {
+          toast.classList.add('fade-out');
+          setTimeout(() => toast.remove(), 300);
+        }, duration);
+
+        // Manual close
+        toast.querySelector('.toast-close').addEventListener('click', () => {
+          toast.classList.add('fade-out');
+          setTimeout(() => toast.remove(), 300);
+        });
+      }
+
+      // UI action stubs
+      function openSettings() {
+        showToast('Settings panel opened', 'info');
+        // Implementation would go here
+      }
+
+      function showHelp() {
+        showToast('Help documentation loading', 'info');
+        // Implementation would go here
+      }
+
+      function reportBug() {
+        showToast('Bug report submitted', 'success');
+        // Implementation would go here
+      }
+
+      function exportStatistics() {
+        showToast('Statistics exported successfully', 'success');
+        // Implementation would go here
+      }
+    </script>
+  </body>
 </html>

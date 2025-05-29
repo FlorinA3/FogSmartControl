@@ -1,0 +1,19 @@
+{
+  "name": "fogsmartcontrol",
+  "version": "1.0.0",
+  "main": "server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": { "test:watch": "jest --watch",
+    "test": "jest",,
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

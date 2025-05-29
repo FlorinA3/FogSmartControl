@@ -1,0 +1,8 @@
+/* Fallback icon styles */
+.fa-microchip::before {
+  content: '⚙️';
+}
+.fa-bluetooth::before {
+  content: '📶';
+}
+/* Add other icon fallbacks */
